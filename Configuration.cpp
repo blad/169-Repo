@@ -50,16 +50,27 @@ Configuration Configuration::continueOnDifferentRoad() {
 
 unsigned int Configuration::lowerBound() const {
 	unsigned int accumulator = 0; 
-	if (this->isRoadDiff)
-		accumulator += Configuration::CHANGE_TIME;
-	accumulator += getTimeTCurrentCar();
+	accumulator += getTimeT();
+	int remainintR1 = this->road1->size() - this->indexCarR1 + 1;
+	int remainintR2 = this->road2->size() - this->indexCarR2 + 1;
+	accumulator += remainintR1 * Configuration::PASS_TIME;
+	accumulator += remainintR2 * Configuration::PASS_TIME;
+	
+	// Calculate the change time depending on the 
+	// number or remaing cars in a diffrent road.
+
 	return 0;
 }
 
-unsigned int Configuration::getTimeTCurrentCar() const {
+unsigned int Configuration::getTimeT() const {
 	unsigned int accumulator = 0;
-	accumulator += this->getWaitTimeCurrentCar();
 	
+	accumulator += parent->getTimeT();
+	if (this->isRoadDiff)
+		accumulator += Configuration::CHANGE_TIME;
+	accumulator += Configuration::PASS_TIME;
+	accumulator += this->getWaitTimeCurrentCar();
+
 	return accumulator;
 }
 
@@ -67,12 +78,12 @@ unsigned int Configuration::getTimeTCurrentCar() const {
 unsigned int Configuration::getWaitTimeCurrentCar() const {
 	int waitTime = 0;
 	unsigned int currentCarIndex = this->indexRoad ? this->indexCarR2+1 : this->indexCarR1+1;
-	vector<Vehicle> * currentRoad = this->indexRoad ? this->road2 : this->road2;
+	vector<Vehicle> * currentRoad = this->indexRoad ? this->road2 : this->road1;
 	int arrivalTime = currentRoad->at(currentCarIndex).arrival;
 	if (this->isRoadDiff){
-		waitTime = max(0, arrivalTime - Configuration::CHANGE_TIME);
+		waitTime = max(0, (arrivalTime - (int)parent->getTimeT() -  Configuration::CHANGE_TIME));
 	} else {
-		waitTime = max(0, arrivalTime);
+		waitTime = max(0, (arrivalTime - (int)parent->getTimeT()));
 	}
 
 	return waitTime;

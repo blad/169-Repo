@@ -26,7 +26,7 @@ public:
 	Configuration continueOnSameRoad();
 	Configuration continueOnDifferentRoad();
 	unsigned int lowerBound() const;
-	unsigned int getTimeTCurrentCar() const;
+	unsigned int getTimeT() const;
 	unsigned int getWaitTimeCurrentCar() const;
 };
 
