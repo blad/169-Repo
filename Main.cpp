@@ -9,23 +9,12 @@
 
 using namespace std;
 
-CLIDriver driver("input.txt", "result.txt");
-vector<Vehicle>* roadList[2];
+CLIDriver driver("input.txt", "result.txt"); // Unused
+vector<Vehicle>* roadList[2]; // Stores the Sample Input
+
 
 
 int main() {
-	roadList[0] = new vector<Vehicle>; // road 1 
-	roadList[1] = new vector<Vehicle>; // road 2
-	fillCarsListSimple(roadList[0], roadList[1]); // Hard Coded Sample Values.
-
-	//Configuration x(&roadList[0], &roadList[1]);
-
-	priority_queue<Configuration, vector<Configuration>, ConfigComparator> activeNodes;
-	//activeNodes.push(x);
-	//activeNodes.push(y);
-
-	cout << "Highest Priority: " << activeNodes.top().lowerBound() << endl;
-
 	for ever {
 		driver.showOptions();
 		driver.askInput();
