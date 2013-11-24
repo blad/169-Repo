@@ -4,6 +4,7 @@
 class CLIDriver
 {
 public:
+	static const char ROAD_INDEX_RESULT_STRING[];
 	CLIDriver(string, string);
 	~CLIDriver();
 	void showOptions();
@@ -16,6 +17,8 @@ public:
 
 	// Executed Branch And Bound on Sample Input
 	void doBranchAndBoundSample();
+
+	Configuration * branching(Configuration *);
 private:
 	string inputFile;
 	string outputFile;

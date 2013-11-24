@@ -6,8 +6,8 @@
  */ 
 ConfigComparator::ConfigComparator() {}
 ConfigComparator::~ConfigComparator() {}
-bool ConfigComparator::operator () (const Configuration & lhs, const Configuration & rhs) const {
-	return (lhs.lowerBound() > rhs.lowerBound());
+bool ConfigComparator::operator () (const Configuration * lhs, const Configuration * rhs) const {
+	return (lhs->lowerBound() > rhs->lowerBound());
 }
 
 
@@ -27,11 +27,14 @@ Configuration::Configuration(vector<Vehicle> * r1, vector<Vehicle> * r2) {
 	this->parent	 = NULL;
 
 	// Negative Value means not evaluated yet.
-	this->_carsLeft   = -1;
+	this->_carsLeftR1 = -1;
+	this->_carsLeftR2 = -1;
 	this->_lambda     = -1;
 	this->_timeT      = -1;
 	this->_waitTime	  = -1;
 	this->_lowerBound = -1;
+	this->_diffRoad   = NULL;
+	this->_sameRoad   = NULL;
 }
 
 
@@ -39,20 +42,23 @@ Configuration::Configuration(vector<Vehicle> * r1, vector<Vehicle> * r2) {
 /**
  * Create a new configuration based on this one, but continuing on the same road.
  */
-Configuration Configuration::continueOnSameRoad() {
-	Configuration sameRoad(road1, road2);
-	sameRoad.parent = this;
-	sameRoad.indexRoad = this->indexRoad;
+Configuration * Configuration::continueOnSameRoad() {
+	if (this->_sameRoad) 
+		return this->_sameRoad;
+
+	this->_sameRoad = new Configuration(road1, road2);
+	this->_sameRoad->parent = this;
+	this->_sameRoad->indexRoad = this->indexRoad;
 
 	if (this->indexRoad) { // Index of road = 1
-		sameRoad.indexCarR2 = this->indexCarR2 + 1;
-		sameRoad.indexCarR1 = this->indexCarR1;
+		this->_sameRoad->indexCarR2 = this->indexCarR2 + 1;
+		this->_sameRoad->indexCarR1 = this->indexCarR1;
 	} else {
-		sameRoad.indexCarR1 = this->indexCarR1 + 1;
-		sameRoad.indexCarR2 = this->indexCarR2;
+		this->_sameRoad->indexCarR1 = this->indexCarR1 + 1;
+	  this->_sameRoad->indexCarR2 = this->indexCarR2;
 	}
 
-	return sameRoad;
+	return this->_sameRoad;
 }
 
 
@@ -60,21 +66,24 @@ Configuration Configuration::continueOnSameRoad() {
 /**
  * Create a new configuration based on this one, but continuing on a different road.
  */
-Configuration Configuration::continueOnDifferentRoad() {
-	Configuration diffRoad(road1, road2);
-	diffRoad.parent = this;
-	diffRoad.isRoadDiff = true;
-	diffRoad.indexRoad = (this->indexRoad == 1) ? 0 : 1;
-	
+Configuration * Configuration::continueOnDifferentRoad() {
+	if (this->_diffRoad) 
+		return this->_diffRoad;
+
+	this->_diffRoad = new Configuration(road1, road2);
+	this->_diffRoad->parent = this;
+	this->_diffRoad->isRoadDiff = true;
+	this->_diffRoad->indexRoad = (this->indexRoad == 1) ? 0 : 1;
+  
 	if (this->indexRoad == 1) {
-		diffRoad.indexCarR1 = this->indexCarR1;
-		diffRoad.indexCarR2 = this->indexCarR2 + 1;
+	    this->_diffRoad->indexCarR1 = this->indexCarR1;
+	    this->_diffRoad->indexCarR2 = this->indexCarR2 + 1;
 	} else {
-		diffRoad.indexCarR2 = this->indexCarR2;
-		diffRoad.indexCarR1 = this->indexCarR1 + 1;
+		this->_diffRoad->indexCarR2 = this->indexCarR2;
+	    this->_diffRoad->indexCarR1 = this->indexCarR1 + 1;
 	}
 
-	return diffRoad;
+	return this->_diffRoad;
 }
 
 
@@ -97,18 +106,18 @@ unsigned int Configuration::calculateLowerBound() {
 	int remainInR2 = this->getLeftOnRoad(2);
 	
 	unsigned int accumulator = 0; 
-	accumulator += getTimeT();
+	accumulator += this->getTimeT();
 	
 	accumulator += remainInR1 * Configuration::PASS_TIME;
 	accumulator += remainInR2 * Configuration::PASS_TIME;
 	accumulator += this->getTimeLambda();
 
 	// Uncomment to see the variable values at each step.
-	/*cout << "Remaining: " << remainInR1 << " in road 1 | " << remainInR2 << " in road 2" << endl;
-	cout << "Time T: " << getTimeT() << endl;
-	cout << "Passing Time: " << (remainInR1 + remainInR2) * Configuration::PASS_TIME << endl;
-	cout << "Waiting Time:" << this->getWaitTimeCurrentCar() << endl;
-	cout << "Lambda: " << getTimeLambda() << endl;*/
+	//cout << "Remaining: " << remainInR1 << " in road 1 | " << remainInR2 << " in road 2" << endl;
+	//cout << "Time T: " << this->getTimeT() << endl;
+	//cout << "Passing Time: " << (remainInR1 + remainInR2) * Configuration::PASS_TIME << endl;
+	//cout << "Waiting Time:" << this->getWaitTimeCurrentCar() << endl;
+	//cout << "Lambda: " << getTimeLambda() << endl;
 
 	this->_lowerBound = accumulator; // Cache the Value
 	return accumulator;
@@ -126,7 +135,7 @@ unsigned int Configuration::getTimeT() {
 
 	unsigned int accumulator = 0;
 	
-	if (this->parent)
+	if (this->parent && this->parent != this)
 	    accumulator += this->parent->getTimeT();
 
 	if (this->isRoadDiff)
@@ -169,7 +178,7 @@ unsigned int Configuration::getWaitTimeCurrentCar() {
 	if (this->_waitTime >= 0)
 		return this->_waitTime; // Return a cached value for future requests
 
-	unsigned int currentCarIndex = this->indexRoad ? this->indexCarR2 : this->indexCarR1;
+	int currentCarIndex = this->indexRoad ? this->indexCarR2 : this->indexCarR1;
 	vector<Vehicle> * currentRoad = this->indexRoad ? this->road2 : this->road1;
 	int arrivalTime = currentRoad->at(currentCarIndex).arrival;	
 	int waitTime = 0;
@@ -192,18 +201,29 @@ unsigned int Configuration::getWaitTimeCurrentCar() {
  * Note this method used real index (1 or 2) not (0 or 1).
  */
 int Configuration::getLeftOnRoad(int rIndex) {
+
 	vector<Vehicle> * road = (rIndex % 2) ? this->road1 : this->road2;
 	int index = (rIndex % 2) ? this->indexCarR1 : this->indexCarR2;
 	index = this->indexRoad != (rIndex % 2) ? index + 1 : index;
 	
-	/*cout << "Road " << rIndex << " Index for Left On Road: " << index << endl;
-	cout << "Road " << rIndex << " Size Road: " << road->size() << endl;
-	cout << "Current Config Road Index" << this->indexRoad << endl << endl;*/
-	if (road->size() == index + 1) {
+	if (road->size() == index) {
+		if (rIndex % 2) this->_carsLeftR1 = 0;
+		else this->_carsLeftR2 = 0;
 		return 0;
 	} else {
+		if (rIndex % 2) this->_carsLeftR1 = (road->size() - index);
+		else this->_carsLeftR2 = (road->size() - index);
 		return (road->size() - index);
 	}
+}
+
+
+
+bool Configuration::isSolution() {
+	if(getLeftOnRoad(1) > 0 && getLeftOnRoad(2) > 0)
+		return false;
+	else
+		return true;
 }
 
 

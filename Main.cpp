@@ -11,7 +11,7 @@ using namespace std;
 
 CLIDriver driver("input.txt", "result.txt"); // Unused
 vector<Vehicle>* roadList[2]; // Stores the Sample Input
-
+priority_queue<Configuration*, vector<Configuration*>, ConfigComparator> activeNodes;
 
 
 int main() {

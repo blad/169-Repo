@@ -9,6 +9,7 @@
 #include <queue>
 #include <functional>
 #include <algorithm>
+#include <exception>
 
 #include "Configuration.h"
 #include "ProgramEnums.h"
